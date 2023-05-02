@@ -1,5 +1,5 @@
 # MLB Betting Recommendation Emailer
-Using a Linear Regression method, this machine learning model generates a recommended spread bet. The trustworthy The Odds API is used by the model to gather data from well-known sportsbooks like Fanduel, DraftKings, and Barstool.
+Using a Linear Regression method, this machine learning model generates a recommended spread bet. The Odds API is used by the model to gather data from well-known sportsbooks like Fanduel, DraftKings, and Barstool.
 
 More specifically, the model takes into account a number of important performance measures that are representative of a team's previous success for the current 2023 season like:
 > R: Runs,
