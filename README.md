@@ -34,5 +34,9 @@ You will also need to obtain credentials for the Google APIs, specifically the G
 
 Once these prerequisites are met, you can simply run the main() function to fetch the betting lines, generate recommendations, and send an email containing the recommendations to a specified recipient.
 
+## Contribute
+
+Everyone is welcome to contribute to this project! Feel free to add new features, fix bugs, or make improvements. Just fork the repository, make your changes, and submit a pull request. I appreciate your help! :)
+
 ## Disclaimer
 Please note that this project is intended for educational purposes only, and should not be used as a basis for actual betting.
