@@ -3,9 +3,10 @@ import json
 import requests
 import pandas as pd
 import base64
-from datetime import datetime, timezone
+import pytz
+from datetime import datetime
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -13,124 +14,180 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from dotenv import load_dotenv
 
 
 def fetch_data_from_api():
-    url = "https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?regions=us&markets=spreads&bookmakers=fanduel,draftkings,barstool&oddsFormat=american&apiKey=87a80126977d66cf58a3c2053a7f3b73"
-    response = requests.get(url)
+    # Fetch game data from The Odds API
+    load_dotenv()
+    api_data = os.getenv("API_LINK")
+    response = requests.get(api_data)
     return json.loads(response.text)
 
+def get_teams_playing_today(api_data):
+    teams_playing_today = set()
+    for game in api_data:
+        game_time = datetime.strptime(
+            game['commence_time'], '%Y-%m-%dT%H:%M:%SZ')
+        if game_time.date() == datetime.today().date():
+            teams_playing_today.add(game['home_team'])
+            teams_playing_today.add(game['away_team'])
+    return teams_playing_today
 
-def load_and_preprocess_data():
-    data = pd.read_csv("2023_MLB_Data.csv")
+def load_and_preprocess_data(api_data):
+    # Load the CSV data
+    mlb_data = pd.read_csv("2023_MLB_Data.csv")
+    
+    # Create dictionary that maps team names to team ID's
+    team_to_id = {
+        "Arizona Diamondbacks": 1,
+        "Atlanta Braves": 2,
+        "Baltimore Orioles": 3,
+        "Boston Red Sox": 4,
+        "Chicago Cubs": 5,
+        "Chicago White Sox": 6,
+        "Cincinnati Reds": 7,
+        "Cleveland Guardians": 8,
+        "Colorado Rockies": 9,
+        "Detroit Tigers": 10,
+        "Houston Astros": 11,
+        "Kansas City Royals": 12,
+        "Los Angeles Angels": 13,
+        "Los Angeles Dodgers": 14,
+        "Miami Marlins": 15,
+        "Milwaukee Brewers": 16,
+        "Minnesota Twins": 17,
+        "New York Mets": 18,
+        "New York Yankees": 19,
+        "Oakland Athletics": 20,
+        "Philadelphia Phillies": 21,
+        "Pittsburgh Pirates": 22,
+        "San Diego Padres": 23,
+        "Seattle Mariners": 24,
+        "San Francisco Giants": 25,
+        "St. Louis Cardinals": 26,
+        "Tampa Bay Rays": 27,
+        "Texas Rangers": 28,
+        "Toronto Blue Jays": 29,
+        "Washington Nationals": 30
+    }
 
-    # One-hot encoding for the team names
-    teams = data["Team"].unique()
-    team_mapping = {team: [0]*len(teams) for team in teams}
-    for i, team in enumerate(teams):
-        team_mapping[team][i] = 1
-    data["Team"] = data["Team"].map(team_mapping)
+    # Get the IDs of the teams playing today
+    teams_playing_today_ids = {team_to_id[team] for team in teams_playing_today}
 
-    train_data, test_data = train_test_split(
-        data, test_size=0.2, random_state=42)
-    return train_data, test_data, team_mapping
+    # Filter the mlb_data DataFrame to only include rows where the team ID is in teams_playing_today_ids
+    mlb_data = mlb_data[mlb_data['Team_ID'].isin(teams_playing_today_ids)]
+
+    # Split the data into training and testing sets
+    train_data, test_data = train_test_split(mlb_data, test_size=0.2)
+
+    return train_data, test_data, team_to_id
+    
+    '''# Use the team_to_id dictionary to get the ID's of the home and away teams from the API data
+    home_team_name = api_data[0]['home_team']
+    away_team_name = api_data[0]['away_team']
+
+    home_team_id = team_to_id.get(home_team_name, -1)
+    away_team_id = team_to_id.get(away_team_name, -1)
+
+    # Split the data into training and testing sets
+    train_data, test_data = train_test_split(mlb_data, test_size=0.2)
+
+    return train_data, test_data, team_to_id'''
+
 
 def train_and_test_model(train_data, test_data):
-    # Train the model
+    # Prepare the training data
     X_train = train_data.drop("R/G", axis=1)
     y_train = train_data["R/G"]
 
-    model = LinearRegression()
-    model.fit(X_train, y_train)
-
-    # Test the model
+    # Prepare the testing data
     X_test = test_data.drop("R/G", axis=1)
     y_test = test_data["R/G"]
 
-    y_pred = model.predict(X_test)
+    # Create and train the model
+    model = RandomForestRegressor(n_estimators=100)
+    model.fit(X_train, y_train)
 
-    # Calculate evaluation metrics
+    # Evaluate the model
+    y_pred = model.predict(X_test)
     mae = mean_absolute_error(y_test, y_pred)
     mse = mean_squared_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
 
-    print("Mean Absolute Error:", mae)
-    print("Mean Squared Error:", mse)
-    print("R-squared Score:", r2)
-
     return model, mae, mse, r2, X_test
 
 
-def get_recommendation(bookmakers, model, X_test, train_data, team_mapping):
-    team_names = []
-    for bookmaker in bookmakers:
-        for market in bookmaker["markets"]:
-            if market["key"] == "spreads":
-                for outcome in market["outcomes"]:
-                    team_name = outcome['name']
-                    if team_name in team_mapping:
-                        team_names.append(team_mapping[team_name])
-    team_data = train_data[train_data[team_names].sum(axis=1) > 0]
-
-    # Predict the R/G values for the teams in team_data
-    predicted_rg = model.predict(team_data.drop("R/G", axis=1))
-
-    # Concatenate all the team features into a single DataFrame
-    team_features_list = []
-    for team_name in team_names:
-        team_features = train_data.loc[train_data[team_name] == 1]
-        if not team_features.empty:
-            team_features_list.append(team_features)
-    if team_features_list:
-        X_test = pd.concat([X_test] + team_features_list)
-
+def get_recommendation(bookmakers, model, train_data, team_to_id):
     spreads = []
     for bookmaker in bookmakers:
         for market in bookmaker["markets"]:
             if market["key"] == "spreads":
                 for outcome in market["outcomes"]:
                     team_name = outcome['name']
-                    if team_name in team_mapping:
-                        team_features = team_data.loc[team_data[team_mapping[team_name]] == 1]
+                    team_id = team_to_id.get(team_name, -1)
+                    if team_id != -1:  # Only proceed if team ID is valid
+                        team_features = train_data.loc[train_data['Team_ID'] == team_id]
                         if not team_features.empty:
                             predicted_rg_value = model.predict(
                                 team_features.drop("R/G", axis=1))[0]
 
                             spreads.append({
-                                "team": outcome["name"],
+                                "team": team_name,  # Use team name here for human-readable output
                                 "price": outcome["price"],
                                 "point": outcome["point"],
                                 "bookmaker": bookmaker["title"],
                                 "predicted_rg": predicted_rg_value,
                             })
+                        else:
+                            print(
+                                f"Skipping team {team_name} (ID: {team_id}) because it is not in the training data")
+                    else:
+                        print(
+                            f"Skipping team {team_name} because no ID could be found for it")
 
     if not spreads:
         return {"error": "No recommendations could be generated"}
 
     sorted_spreads = sorted(
-        spreads, key=lambda x: x["predicted_rg"], reverse=True)
-    best_spread = sorted_spreads[0]
-    return best_spread
+        spreads, key=lambda x: (x["predicted_rg"], -x["price"]), reverse=True)
+
+    return sorted_spreads
 
 
-def parse_data(data, model, train_data, X_test, team_mapping):
+def parse_data(mlb_data, model, train_data, team_to_id, teams_playing_today):
     games = []
-    for game in data:
-        team1 = game['home_team']
-        team2 = game['away_team']
-        commence_time = game['commence_time']
-        bookmakers = game['bookmakers']
+    for game in api_data:
+        try:
+            home_team = game['home_team']
+            away_team = game['away_team']
+            commence_time = datetime.fromisoformat(game['commence_time'].replace("Z", ""))
+            bookmakers = game['bookmakers']
+            
+            # Skip the game if neither team is playing today
+            if home_team not in teams_playing_today and away_team not in teams_playing_today:
+                continue
 
-        recommendation = get_recommendation(bookmakers, model, X_test, train_data, team_mapping)
+            # Only get recommendations for teams that are playing today
+            if home_team in teams_playing_today and away_team in teams_playing_today:
+                recommendation = get_recommendation(
+                    bookmakers, model, train_data, team_to_id)
+            else:
+                recommendation = []
 
-        games.append({
-            'team1': team1,
-            'team2': team2,
-            'commence_time': commence_time,
-            'bookmakers': bookmakers,
-            'recommendation': recommendation,
-        })
+            games.append({
+                'home_team': home_team,
+                'away_team': away_team,
+                'commence_time': commence_time,
+                'bookmakers': bookmakers,
+                'recommendation': recommendation,
+            })
+        except Exception as e:
+            print(e)
+            continue
+
     return games
+
 
 def create_email_template(games):
     email_body = f"""
@@ -180,93 +237,79 @@ def create_email_template(games):
     """
 
     for game in games:
-        commence_time = datetime.strptime(
-            game['commence_time'], '%Y-%m-%dT%H:%M:%SZ')
-        commence_time_formatted = commence_time.strftime('%m-%d-%Y')
-        best_recommendation = game['recommendation']
-        print(best_recommendation)
+        recommendation = game['recommendation']
+        commence_time = game['commence_time'].strftime('%H:%M')  # Format time
         email_body += f"""
         <div class="game">
-            <h2>{game['team1']} vs {game['team2']}</h2>
-            <div class="start-time">Start time: {commence_time_formatted}</div>
-            <div class="recommendation">Recommendation: <span style="color: green;">{best_recommendation['team']} ({best_recommendation['point']}/{best_recommendation['price']})</span> at <span style="color: red;">{best_recommendation['bookmaker']}</span></div>
+            <h2>{game['home_team']} vs {game['away_team']}</h2>
+            <div class="start-time">Start time: {commence_time} Local Time</div>
+            <div class="recommendation">Recommendation: <span style="color: green;">{recommendation['team']} ({recommendation['point']}/{recommendation['price']})</span> at <span style="color: red;">{recommendation['bookmaker']}</span></div>
         </div>
         """
-
     email_body += "</body></html>"
     return email_body
 
-def get_google_credentials():
-    SCOPES = ['https://www.googleapis.com/auth/gmail.send']
-    creds = None
+def send_email(games, mae, mse, r2, email_body):
+    # Send email with game predictions and model evaluation metrics
+    creds = get_credentials()
+    service = build('gmail', 'v1', credentials=creds)
 
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"MLB Game Predictions for {datetime.datetime.now().strftime('%Y-%m-%d')}"
+    msg["From"] = bet_email = os.getenv("BET_EMAIL")
+    msg["To"] = "YOUR_EMAIL_HERE"
+
+    # Added model evaluation metrics to the email body
+    email_body += f"""
+    <h2>Model Evaluation Metrics</h2>
+    <p>Mean Absolute Error: {mae}</p>
+    <p>Mean Squared Error: {mse}</p>
+    <p>R-squared Score: {r2}</p>
+    """
+
+    # Create the email body with predictions and evaluation metrics
+    msg.attach(MIMEText(email_body, "html"))
+
+    create_message = {'raw': base64.urlsafe_b64encode(msg.as_bytes()).decode()}
+    send_message = (service.users().messages().send(
+        userId="me", body=create_message).execute())
+    print(F'Sent message to {msg["To"]} Message Id: {send_message["id"]}')
+
+
+def get_credentials():
+    # Load and refresh the Google OAuth2 credentials
+    creds = None
+    if os.path.exists("token.json"):
+        creds = Credentials.from_authorized_user_file("token.json")
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
+                "credentials.json", [
+                    "https://www.googleapis.com/auth/gmail.send"]
+            )
             creds = flow.run_local_server(port=0)
-
-        with open('token.json', 'w') as token:
+        with open("token.json", "w") as token:
             token.write(creds.to_json())
 
     return creds
 
 
-def send_email_with_gmail_api(email_body):
-    creds = get_google_credentials()
-    service = build('gmail', 'v1', credentials=creds)
-
-    from_email = "briansbets216@gmail.com"
-    to_email = "vojtko.brian@yahoo.com"
-    subject = "Your Daily MLB Bets from Brian"
-
-    message = MIMEMultipart()
-    message['To'] = to_email
-    message['Subject'] = subject
-    message.attach(MIMEText(email_body, 'html'))
-
-    create_message = {'raw': base64.urlsafe_b64encode(
-        message.as_bytes()).decode()}
-    send_message = (service.users().messages().send(
-        userId="me", body=create_message).execute())
-    print(F'sent message to {to_email} Message Id: {send_message["id"]}')
-
-
-def main():
+if __name__ == "__main__":
     print("Fetching data from API...")
-    data = fetch_data_from_api()
-
+    api_data = fetch_data_from_api()
+    print("Getting today's games...")
+    teams_playing_today = get_teams_playing_today(api_data)
     print("Loading and preprocessing data...")
-    train_data, test_data, team_mapping = load_and_preprocess_data()
-    print(train_data.dtypes)
-
+    train_data, test_data, team_to_id = load_and_preprocess_data(api_data)
     print("Training and testing the model...")
     model, mae, mse, r2, X_test = train_and_test_model(train_data, test_data)
-    print("Mean Absolute Error:", mae)
-    print("Mean Squared Error:", mse)
-    print("R-squared Score:", r2)
-
     print("Parsing data...")
-    games = parse_data(data, model, train_data, X_test, team_mapping)
-    
-    # Get the games for today
-    print("Getting today's games...")
-    todays_date = datetime.now(timezone.utc).date().isoformat()
-    todays_games = [game for game in games if game['commence_time'].split('T')[0] == todays_date]
-
-    # Create the email template
+    games = parse_data(api_data, model, train_data, team_to_id, teams_playing_today)
     print("Creating email template...")
-    email_body = create_email_template(todays_games)
-
+    email_body = create_email_template(games)
     print("Sending email...")
-    send_email_with_gmail_api(email_body)
-
-    print("Email sent.")
-
-if __name__ == "__main__":
-    main()
+    send_email(games, mae, mse, r2, email_body)
+    print("Done!")
