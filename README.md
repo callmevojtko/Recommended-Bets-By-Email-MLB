@@ -1,5 +1,6 @@
 # MLB Betting Recommendation Emailer
-Using a Linear Regression method, this machine learning model generates a recommended spread bet. The trustworthy The Odds API is used by the model to gather data from well-known sportsbooks like Fanduel, DraftKings, and Barstool.
+
+This machine learning model utilizes a Random Forest Regressor to generate recommended spread bets for Major League Baseball (MLB) games. The model fetches game data from the reliable The Odds API, which aggregates data from reputable sportsbooks such as Fanduel, DraftKings, and Barstool.
 
 The model considers several key performance metrics that reflect a team's past performance in the current 2023 season such as:
 > R: Runs,
@@ -36,10 +37,6 @@ By comparing these metrics with the latest betting lines offered, the model can 
 3. Once the above prerequisites are completed, you can run the `main()` function to fetch the betting lines, generate recommendations, and send an email with the recommendations to a specified recipient.
 
 ## Contribute
-Everyone is welcome to contribute to this project! Feel free to add new features, fix bugs, or make improvements. Just fork the repository, make your changes, and submit a pull request. I appreciate your help! :)
-
-## Contribute
-
 Everyone is welcome to contribute to this project! Feel free to add new features, fix bugs, or make improvements. Just fork the repository, make your changes, and submit a pull request. I appreciate your help! :)
 
 ## Disclaimer
