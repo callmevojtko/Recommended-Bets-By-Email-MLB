@@ -1,6 +1,6 @@
 # MLB Betting Recommendation Emailer
 
-This machine learning model utilizes a Random Forest Regressor to generate recommended spread bets for Major League Baseball (MLB) games. The model fetches game data from the reliable The Odds API, which aggregates data from reputable sportsbooks such as Fanduel, DraftKings, and Barstool.
+This machine learning model utilizes a Random Forest Regressor to generate recommended spread bets for Major League Baseball (MLB) games. The model fetches game data from The Odds API, which aggregates data from reputable sportsbooks such as Fanduel, DraftKings, and Barstool.
 
 The model considers several key performance metrics that reflect a team's past performance in the current 2023 season such as:
 > R: Runs,
