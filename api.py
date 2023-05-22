@@ -1,7 +1,8 @@
 import argparse
-
 import requests
+from dotenv import load_dotenv
 
+load_dotenv()
 
 # Obtain the api key that was passed in from the command line
 parser = argparse.ArgumentParser(description='Sample V4')
@@ -11,7 +12,7 @@ args = parser.parse_args()
 
 # An api key is emailed to you when you sign up to a plan
 # Get a free API key at https://api.the-odds-api.com/
-API_KEY = args.api_key or '87a80126977d66cf58a3c2053a7f3b73'
+API_KEY = args.api_key or os.getenv('API_KEY')
 
 SPORT = 'baseball_mlb'  # use the sport_key from the /sports endpoint below, or use 'upcoming' to see the next 8 games across all sports
 

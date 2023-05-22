@@ -34,7 +34,7 @@ def get_teams_playing_today(api_data):
             teams_playing_today.add(game['away_team'])
     return teams_playing_today
 
-def load_and_preprocess_data(api_data):
+def load_and_preprocess_data(api_data, teams_playing_today):
     # Load the CSV data
     mlb_data = pd.read_csv("2023_MLB_Data.csv")
     
@@ -82,19 +82,6 @@ def load_and_preprocess_data(api_data):
     train_data, test_data = train_test_split(mlb_data, test_size=0.2)
 
     return train_data, test_data, team_to_id
-    
-    '''# Use the team_to_id dictionary to get the ID's of the home and away teams from the API data
-    home_team_name = api_data[0]['home_team']
-    away_team_name = api_data[0]['away_team']
-
-    home_team_id = team_to_id.get(home_team_name, -1)
-    away_team_id = team_to_id.get(away_team_name, -1)
-
-    # Split the data into training and testing sets
-    train_data, test_data = train_test_split(mlb_data, test_size=0.2)
-
-    return train_data, test_data, team_to_id'''
-
 
 def train_and_test_model(train_data, test_data):
     # Prepare the training data
@@ -139,15 +126,12 @@ def get_recommendation(bookmakers, model, train_data, team_to_id):
                                 "bookmaker": bookmaker["title"],
                                 "predicted_rg": predicted_rg_value,
                             })
-                        else:
-                            print(
-                                f"Skipping team {team_name} (ID: {team_id}) because it is not in the training data")
                     else:
                         print(
                             f"Skipping team {team_name} because no ID could be found for it")
 
     if not spreads:
-        return {"error": "No recommendations could be generated"}
+        return None  # Return None instead of an error dictionary
 
     sorted_spreads = sorted(
         spreads, key=lambda x: (x["predicted_rg"], -x["price"]), reverse=True)
@@ -161,9 +145,10 @@ def parse_data(mlb_data, model, train_data, team_to_id, teams_playing_today):
         try:
             home_team = game['home_team']
             away_team = game['away_team']
-            commence_time = datetime.fromisoformat(game['commence_time'].replace("Z", ""))
+            commence_time = datetime.fromisoformat(
+                game['commence_time'].replace("Z", ""))
             bookmakers = game['bookmakers']
-            
+
             # Skip the game if neither team is playing today
             if home_team not in teams_playing_today and away_team not in teams_playing_today:
                 continue
@@ -172,6 +157,8 @@ def parse_data(mlb_data, model, train_data, team_to_id, teams_playing_today):
             if home_team in teams_playing_today and away_team in teams_playing_today:
                 recommendation = get_recommendation(
                     bookmakers, model, train_data, team_to_id)
+                if recommendation is None:  # Skip this game if no recommendation could be generated
+                    continue
             else:
                 recommendation = []
 
@@ -187,7 +174,6 @@ def parse_data(mlb_data, model, train_data, team_to_id, teams_playing_today):
             continue
 
     return games
-
 
 def create_email_template(games):
     email_body = f"""
@@ -237,16 +223,17 @@ def create_email_template(games):
     """
 
     for game in games:
-        recommendation = game['recommendation']
         commence_time = game['commence_time'].strftime('%H:%M')  # Format time
         email_body += f"""
         <div class="game">
             <h2>{game['home_team']} vs {game['away_team']}</h2>
             <div class="start-time">Start time: {commence_time} Local Time</div>
-            <div class="recommendation">Recommendation: <span style="color: green;">{recommendation['team']} ({recommendation['point']}/{recommendation['price']})</span> at <span style="color: red;">{recommendation['bookmaker']}</span></div>
-        </div>
         """
-    email_body += "</body></html>"
+        for rec in game['recommendation']:
+            email_body += f"""
+            <div class="recommendation">Recommendation: <span style="color: green;">{rec['team']} ({rec['point']}/{rec['price']})</span> at <span style="color: red;">{rec['bookmaker']}</span></div>
+            """
+        email_body += "</div>"
     return email_body
 
 def send_email(games, mae, mse, r2, email_body):
@@ -255,9 +242,9 @@ def send_email(games, mae, mse, r2, email_body):
     service = build('gmail', 'v1', credentials=creds)
 
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"MLB Game Predictions for {datetime.datetime.now().strftime('%Y-%m-%d')}"
+    msg["Subject"] = f"MLB Game Predictions for {datetime.now().strftime('%B %d, %Y')}"
     msg["From"] = bet_email = os.getenv("BET_EMAIL")
-    msg["To"] = "YOUR_EMAIL_HERE"
+    msg["To"] = "YOUR_EMAIL_HERE" # Replace with your email address
 
     # Added model evaluation metrics to the email body
     email_body += f"""
@@ -296,14 +283,13 @@ def get_credentials():
 
     return creds
 
-
 if __name__ == "__main__":
     print("Fetching data from API...")
     api_data = fetch_data_from_api()
     print("Getting today's games...")
     teams_playing_today = get_teams_playing_today(api_data)
     print("Loading and preprocessing data...")
-    train_data, test_data, team_to_id = load_and_preprocess_data(api_data)
+    train_data, test_data, team_to_id = load_and_preprocess_data(api_data, teams_playing_today)
     print("Training and testing the model...")
     model, mae, mse, r2, X_test = train_and_test_model(train_data, test_data)
     print("Parsing data...")

@@ -1,3 +1,4 @@
 *.json
 .env
-api.py
+/quickstart.py
+/api.py
