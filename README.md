@@ -30,7 +30,7 @@ By comparing these metrics with the latest betting lines offered, the model can 
 - The Odds API
 
 ## How to Use
-1. Create an account with The Odds API to get an API key. The API key is then used as an argument to the `fetch_data_from_api()` function in the script.
+1. Create an account with [The Odds API](https://the-odds-api.com/) to get an API key. The API key is then used as an argument to the `fetch_data_from_api()` function in the script.
 
 2. Obtain credentials for Gmail API. These credentials should be stored in a `credentials.json` file in the root directory of the project. Read more on setting up the Gmail API with Python [here](https://developers.google.com/gmail/api/quickstart/python)
 
