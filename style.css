@@ -38,8 +38,8 @@ body {
     border-radius: 5px;
     width: 100%;
     box-sizing: border-box;
-    color: #92fc8c; /* light blue font color */
-    font-weight: bold; /* bold font */
+    color: #92fc8c;
+    font-weight: bold;
 }
 
 .game img.team-logo, .game img.bookmaker-logo {

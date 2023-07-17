@@ -2,7 +2,7 @@
 const teamLogos = {
     'Arizona Diamondbacks': 'ari_d.svg',
     'Atlanta Braves': 'atl_d.svg',
-    'Baltimore Orioles': 'bal_d.svg',
+    'Baltimore Orioles': '/img/bal_d.svg',
     'Boston Red Sox': 'bos_d.svg',
     'Chicago Cubs': 'chc_d.svg',
     'Chicago White Sox': 'cws_d.svg',
