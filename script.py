@@ -22,6 +22,10 @@ def fetch_data_from_api():
     load_dotenv()
     api_data = os.getenv("API_LINK")
     response = requests.get(api_data)
+    
+    if response.status_code != 200:
+        raise Exception("Failed to fetch data from API")
+    
     return json.loads(response.text)
 
 def get_teams_playing_today(api_data):
@@ -36,7 +40,11 @@ def get_teams_playing_today(api_data):
 
 def load_and_preprocess_data(api_data, teams_playing_today):
     # Load the CSV data
-    mlb_data = pd.read_csv("2023_MLB_Data.csv")
+    mlb_data = pd.read_csv("data/2023_MLB_Data.csv")
+    
+    # Check if the CSV data is not empty
+    if mlb_data.empty:
+        raise Exception("The CSV data is empty.")
     
     # Create dictionary that maps team names to team ID's
     team_to_id = {
@@ -74,14 +82,23 @@ def load_and_preprocess_data(api_data, teams_playing_today):
 
     # Get the IDs of the teams playing today
     teams_playing_today_ids = {team_to_id[team] for team in teams_playing_today}
+    
+    # Check if there are teams playing today
+    if not teams_playing_today_ids:
+        raise Exception("There are no games scheduled for today.")
 
     # Filter the mlb_data DataFrame to only include rows where the team ID is in teams_playing_today_ids
     mlb_data = mlb_data[mlb_data['Team_ID'].isin(teams_playing_today_ids)]
+    
+    # Check if the filtered DataFrame is not empty
+    if mlb_data.empty:
+        raise Exception("The filtered DataFrame is empty.")
 
     # Split the data into training and testing sets
     train_data, test_data = train_test_split(mlb_data, test_size=0.2)
 
     return train_data, test_data, team_to_id
+
 
 def train_and_test_model(train_data, test_data):
     # Prepare the training data
@@ -93,7 +110,7 @@ def train_and_test_model(train_data, test_data):
     y_test = test_data["R/G"]
 
     # Create and train the model
-    model = RandomForestRegressor(n_estimators=100)
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
 
     # Evaluate the model
@@ -141,7 +158,7 @@ def get_recommendation(bookmakers, model, train_data, team_to_id):
 
 def parse_data(mlb_data, model, train_data, team_to_id, teams_playing_today):
     games = []
-    for game in api_data:
+    for game in mlb_data:
         try:
             home_team = game['home_team']
             away_team = game['away_team']
@@ -154,13 +171,19 @@ def parse_data(mlb_data, model, train_data, team_to_id, teams_playing_today):
                 continue
 
             # Only get recommendations for teams that are playing today
-            if home_team in teams_playing_today and away_team in teams_playing_today:
-                recommendation = get_recommendation(
+            if home_team in teams_playing_today or away_team in teams_playing_today:
+                # Generate recommendations for all bookmakers
+                all_recommendations = get_recommendation(
                     bookmakers, model, train_data, team_to_id)
-                if recommendation is None:  # Skip this game if no recommendation could be generated
-                    continue
-            else:
+
+                # Select the top recommendation from all
                 recommendation = []
+                if all_recommendations:
+                    recommendation.append(
+                        max(all_recommendations, key=lambda x: x['predicted_rg']))
+
+                if not recommendation:  # Skip this game if no recommendation could be generated
+                    continue
 
             games.append({
                 'home_team': home_team,
@@ -244,7 +267,7 @@ def send_email(games, mae, mse, r2, email_body):
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"MLB Game Predictions for {datetime.now().strftime('%B %d, %Y')}"
     msg["From"] = bet_email = os.getenv("BET_EMAIL")
-    msg["To"] = "YOUR_EMAIL_HERE" # Replace with your email address
+    msg["To"] = "" # Replace with your email address
 
     # Added model evaluation metrics to the email body
     email_body += f"""
@@ -284,18 +307,21 @@ def get_credentials():
     return creds
 
 if __name__ == "__main__":
-    print("Fetching data from API...")
-    api_data = fetch_data_from_api()
-    print("Getting today's games...")
-    teams_playing_today = get_teams_playing_today(api_data)
-    print("Loading and preprocessing data...")
-    train_data, test_data, team_to_id = load_and_preprocess_data(api_data, teams_playing_today)
-    print("Training and testing the model...")
-    model, mae, mse, r2, X_test = train_and_test_model(train_data, test_data)
-    print("Parsing data...")
-    games = parse_data(api_data, model, train_data, team_to_id, teams_playing_today)
-    print("Creating email template...")
-    email_body = create_email_template(games)
-    print("Sending email...")
-    send_email(games, mae, mse, r2, email_body)
-    print("Done!")
+    try:
+        print("Fetching data from API...")
+        api_data = fetch_data_from_api()
+        print("Getting today's games...")
+        teams_playing_today = get_teams_playing_today(api_data)
+        print("Loading and preprocessing data...")
+        train_data, test_data, team_to_id = load_and_preprocess_data(api_data, teams_playing_today)
+        print("Training and testing the model...")
+        model, mae, mse, r2, X_test = train_and_test_model(train_data, test_data)
+        print("Parsing data...")
+        games = parse_data(api_data, model, train_data, team_to_id, teams_playing_today)
+        print("Creating email template...")
+        email_body = create_email_template(games)
+        print("Sending email...")
+        send_email(games, mae, mse, r2, email_body)
+        print("Done!")
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")

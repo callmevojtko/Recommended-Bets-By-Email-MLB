@@ -1,4 +1,31 @@
+# .gitignore
+
+# Ignore macOS system files
+.DS_Store
+
+# Ignore Python build artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Ignore Python environment and package files
+*.env
+*.venv
+env/
+venv/
+*.log
 *.json
-.env
-/quickstart.py
-/api.py
+*.xml
+*.sqlite
+quickstart.py
+
+# Ignore Jupyter Notebook
+.ipynb_checkpoints
+
+# Ignore VS Code settings
+.vscode/
+
+# Ignore pytest cache
+.pytest_cache/
