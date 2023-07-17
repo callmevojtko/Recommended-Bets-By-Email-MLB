@@ -57,12 +57,12 @@ function createHtml(games) {
         var teams = document.createElement('h2');
 
         var homeLogo = document.createElement('img');
-        homeLogo.src = "/images/" + teamLogos[game.home_team];
+        homeLogo.src = "/img/" + teamLogos[game.home_team];
         homeLogo.alt = game.home_team + " logo";
         homeLogo.classList.add('team-logo');
 
         var awayLogo = document.createElement('img');
-        awayLogo.src = "/images/" + teamLogos[game.away_team];
+        awayLogo.src = "/img/" + teamLogos[game.away_team];
         awayLogo.alt = game.away_team + " logo";
         awayLogo.classList.add('team-logo');
 
@@ -78,7 +78,7 @@ function createHtml(games) {
             recommendationDiv.className = 'recommendation';
 
             var bookmakerLogo = document.createElement('img');
-            bookmakerLogo.src = "/images/" + bookmakerLogos[rec.bookmaker];
+            bookmakerLogo.src = "/img/" + bookmakerLogos[rec.bookmaker];
             bookmakerLogo.alt = rec.bookmaker + " logo";
             bookmakerLogo.classList.add('bookmaker-logo');
 
