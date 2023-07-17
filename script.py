@@ -102,11 +102,12 @@ def load_and_preprocess_data(api_data, teams_playing_today):
 
 def train_and_test_model(train_data, test_data):
     # Prepare the training data
-    X_train = train_data.drop("R/G", axis=1)
+    features = ["R", "H", "R/G", "OPS"]
+    X_train = train_data[features]
     y_train = train_data["R/G"]
 
     # Prepare the testing data
-    X_test = test_data.drop("R/G", axis=1)
+    X_test = test_data[features]
     y_test = test_data["R/G"]
 
     # Create and train the model
@@ -121,7 +122,6 @@ def train_and_test_model(train_data, test_data):
 
     return model, mae, mse, r2, X_test
 
-
 def get_recommendation(bookmakers, model, train_data, team_to_id):
     spreads = []
     for bookmaker in bookmakers:
@@ -133,8 +133,10 @@ def get_recommendation(bookmakers, model, train_data, team_to_id):
                     if team_id != -1:  # Only proceed if team ID is valid
                         team_features = train_data.loc[train_data['Team_ID'] == team_id]
                         if not team_features.empty:
+                            # Add more feature names here as needed
+                            features = ["R", "H", "R/G", "OPS"]
                             predicted_rg_value = model.predict(
-                                team_features.drop("R/G", axis=1))[0]
+                                team_features[features])[0]
 
                             spreads.append({
                                 "team": team_name,  # Use team name here for human-readable output
@@ -154,7 +156,6 @@ def get_recommendation(bookmakers, model, train_data, team_to_id):
         spreads, key=lambda x: (x["predicted_rg"], -x["price"]), reverse=True)
 
     return sorted_spreads
-
 
 def parse_data(mlb_data, model, train_data, team_to_id, teams_playing_today):
     games = []
@@ -267,7 +268,7 @@ def send_email(games, mae, mse, r2, email_body):
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"MLB Game Predictions for {datetime.now().strftime('%B %d, %Y')}"
     msg["From"] = bet_email = os.getenv("BET_EMAIL")
-    msg["To"] = "" # Replace with your email address
+    msg["To"] = "callmevojtko@yahoo.com" # Replace with your email address
 
     # Added model evaluation metrics to the email body
     email_body += f"""
@@ -323,5 +324,10 @@ if __name__ == "__main__":
         print("Sending email...")
         send_email(games, mae, mse, r2, email_body)
         print("Done!")
+        
+        # Save the games data as a JSON file
+        with open('data/data.json', 'w') as f:
+            json.dump(games, f, default=str)
+            
     except Exception as e:
         print(f"An error occurred: {str(e)}")

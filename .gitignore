@@ -16,7 +16,8 @@ __pycache__/
 env/
 venv/
 *.log
-*.json
+credentials.json
+token.json
 *.xml
 *.sqlite
 quickstart.py
