@@ -22,6 +22,7 @@ data.json
 *.xml
 *.sqlite
 quickstart.py
+api.py
 
 # Ignore Jupyter Notebook
 .ipynb_checkpoints
