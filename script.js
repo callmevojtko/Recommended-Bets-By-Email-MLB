@@ -2,7 +2,7 @@
 const teamLogos = {
     'Arizona Diamondbacks': 'ari_d.svg',
     'Atlanta Braves': 'atl_d.svg',
-    'Baltimore Orioles': '/img/bal_d.svg',
+    'Baltimore Orioles': 'bal_d.svg',
     'Boston Red Sox': 'bos_d.svg',
     'Chicago Cubs': 'chc_d.svg',
     'Chicago White Sox': 'cws_d.svg',
@@ -57,12 +57,12 @@ function createHtml(games) {
         var teams = document.createElement('h2');
 
         var homeLogo = document.createElement('img');
-        homeLogo.src = "/img/" + teamLogos[game.home_team];
+        homeLogo.src ='https://callmevojtko.github.io/img/' + teamLogos[game.home_team]
         homeLogo.alt = game.home_team + " logo";
         homeLogo.classList.add('team-logo');
 
         var awayLogo = document.createElement('img');
-        awayLogo.src = "/img/" + teamLogos[game.away_team];
+        awayLogo.src ='https://callmevojtko.github.io/img/' + teamLogos[game.away_team]
         awayLogo.alt = game.away_team + " logo";
         awayLogo.classList.add('team-logo');
 
@@ -78,7 +78,8 @@ function createHtml(games) {
             recommendationDiv.className = 'recommendation';
 
             var bookmakerLogo = document.createElement('img');
-            bookmakerLogo.src = "/img/" + bookmakerLogos[rec.bookmaker];
+            bookmakerLogo.src ='https://callmevojtko.github.io/img/' +
+                bookmakerLogos[rec.bookmaker]
             bookmakerLogo.alt = rec.bookmaker + " logo";
             bookmakerLogo.classList.add('bookmaker-logo');
 
