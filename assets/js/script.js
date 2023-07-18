@@ -74,6 +74,13 @@ function createHtml(games) {
 
         gameDiv.appendChild(teams)
 
+        var startTime = document.createElement('div')
+        startTime.className = 'start-time'
+        startTime.textContent = `Start time: ${new Date(
+            game.commence_time
+        ).toLocaleTimeString()} EST`
+        gameDiv.appendChild(startTime)
+
         // Create and append each recommendation
         game.recommendation.forEach((rec) => {
             var recommendationDiv = document.createElement('div')

@@ -18,7 +18,6 @@ venv/
 *.log
 credentials.json
 token.json
-data.json
 *.xml
 *.sqlite
 quickstart.py

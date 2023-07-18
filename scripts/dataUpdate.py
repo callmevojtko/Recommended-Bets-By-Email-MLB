@@ -30,7 +30,7 @@ def main():
     df = fetch_data(url)
     df = clean_data(df)
     save_data(
-        df, '') # Set your own path to MLB DATA file
+        df, './data/2023_MLB_Data.csv')  # Set your own path to MLB DATA file
 
 
 if __name__ == '__main__':

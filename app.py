@@ -1,10 +1,11 @@
+from datetime import timedelta
 import os
 import json
 import requests
 import pandas as pd
 import base64
 import pytz
-from datetime import datetime
+from datetime import datetime, timedelta
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
@@ -16,93 +17,95 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from dotenv import load_dotenv
 
+# Create dictionary that maps team names to team ID's
+team_to_id = {
+    "Arizona Diamondbacks": 1,
+    "Atlanta Braves": 2,
+    "Baltimore Orioles": 3,
+    "Boston Red Sox": 4,
+    "Chicago Cubs": 5,
+    "Chicago White Sox": 6,
+    "Cincinnati Reds": 7,
+    "Cleveland Guardians": 8,
+    "Colorado Rockies": 9,
+    "Detroit Tigers": 10,
+    "Houston Astros": 11,
+    "Kansas City Royals": 12,
+    "Los Angeles Angels": 13,
+    "Los Angeles Dodgers": 14,
+    "Miami Marlins": 15,
+    "Milwaukee Brewers": 16,
+    "Minnesota Twins": 17,
+    "New York Mets": 18,
+    "New York Yankees": 19,
+    "Oakland Athletics": 20,
+    "Philadelphia Phillies": 21,
+    "Pittsburgh Pirates": 22,
+    "San Diego Padres": 23,
+    "Seattle Mariners": 24,
+    "San Francisco Giants": 25,
+    "St. Louis Cardinals": 26,
+    "Tampa Bay Rays": 27,
+    "Texas Rangers": 28,
+    "Toronto Blue Jays": 29,
+    "Washington Nationals": 30
+}
+
 
 def fetch_data_from_api():
     # Fetch game data from The Odds API
     load_dotenv()
     api_data = os.getenv("API_LINK")
     response = requests.get(api_data)
-    
+
     if response.status_code != 200:
         raise Exception("Failed to fetch data from API")
-    
+
     return json.loads(response.text)
 
-def get_teams_playing_today(api_data):
-    teams_playing_today = set()
-    for game in api_data:
-        game_time = datetime.strptime(
-            game['commence_time'], '%Y-%m-%dT%H:%M:%SZ')
-        if game_time.date() == datetime.today().date():
-            teams_playing_today.add(game['home_team'])
-            teams_playing_today.add(game['away_team'])
-    return teams_playing_today
 
-def load_and_preprocess_data(api_data, teams_playing_today):
+def get_games_playing_today(api_data, team_to_id):
+    games_playing_today_ids = set()
+    current_date_utc = datetime.utcnow().date()
+    print(f"Current date in UTC: {current_date_utc}")
+    for game in api_data:
+        commence_time = datetime.strptime(
+            game['commence_time'], '%Y-%m-%dT%H:%M:%SZ')
+        commence_date_utc = commence_time.date()
+        print(
+            f"Commence time for {game['home_team']} vs {game['away_team']}: {commence_date_utc}")
+        if commence_date_utc == current_date_utc:
+            print(f"This game is considered a 'today's game'")
+            games_playing_today_ids.add(team_to_id[game['home_team']])
+            games_playing_today_ids.add(team_to_id[game['away_team']])
+    return games_playing_today_ids
+
+
+def load_and_preprocess_data(api_data, games_playing_today_ids):
     # Load the CSV data
     mlb_data = pd.read_csv("data/2023_MLB_Data.csv")
-    
+
     # Check if the CSV data is not empty
     if mlb_data.empty:
         raise Exception("The CSV data is empty.")
-    
-    # Create dictionary that maps team names to team ID's
-    team_to_id = {
-        "Arizona Diamondbacks": 1,
-        "Atlanta Braves": 2,
-        "Baltimore Orioles": 3,
-        "Boston Red Sox": 4,
-        "Chicago Cubs": 5,
-        "Chicago White Sox": 6,
-        "Cincinnati Reds": 7,
-        "Cleveland Guardians": 8,
-        "Colorado Rockies": 9,
-        "Detroit Tigers": 10,
-        "Houston Astros": 11,
-        "Kansas City Royals": 12,
-        "Los Angeles Angels": 13,
-        "Los Angeles Dodgers": 14,
-        "Miami Marlins": 15,
-        "Milwaukee Brewers": 16,
-        "Minnesota Twins": 17,
-        "New York Mets": 18,
-        "New York Yankees": 19,
-        "Oakland Athletics": 20,
-        "Philadelphia Phillies": 21,
-        "Pittsburgh Pirates": 22,
-        "San Diego Padres": 23,
-        "Seattle Mariners": 24,
-        "San Francisco Giants": 25,
-        "St. Louis Cardinals": 26,
-        "Tampa Bay Rays": 27,
-        "Texas Rangers": 28,
-        "Toronto Blue Jays": 29,
-        "Washington Nationals": 30
-    }
 
-    # Get the IDs of the teams playing today
-    teams_playing_today_ids = {team_to_id[team] for team in teams_playing_today}
-    
-    # Check if there are teams playing today
-    if not teams_playing_today_ids:
-        raise Exception("There are no games scheduled for today.")
+    # Filter the mlb_data DataFrame to only include rows where the team ID is in games_playing_today_ids
+    mlb_data_today = mlb_data[mlb_data['Team_ID'].isin(
+        games_playing_today_ids)]
 
-    # Filter the mlb_data DataFrame to only include rows where the team ID is in teams_playing_today_ids
-    mlb_data = mlb_data[mlb_data['Team_ID'].isin(teams_playing_today_ids)]
-    
     # Check if the filtered DataFrame is not empty
-    if mlb_data.empty:
+    if mlb_data_today.empty:
         raise Exception("The filtered DataFrame is empty.")
 
     # Split the data into training and testing sets
-    train_data, test_data = train_test_split(mlb_data, test_size=0.2)
+    train_data, test_data = train_test_split(mlb_data_today, test_size=0.2)
 
-    return train_data, test_data, team_to_id
+    return train_data, test_data
 
 
 def train_and_test_model(train_data, test_data):
     # Prepare the training data
-    features = ["R", "H", "R/G", "OPS"]
+    features = ["R", "H", "R/G", "OPS", "HR", "BB", "SO", "OBP", "SLG"]
     X_train = train_data[features]
     y_train = train_data["R/G"]
 
@@ -133,8 +136,8 @@ def get_recommendation(bookmakers, model, train_data, team_to_id):
                     if team_id != -1:  # Only proceed if team ID is valid
                         team_features = train_data.loc[train_data['Team_ID'] == team_id]
                         if not team_features.empty:
-                            # Add more feature names here as needed
-                            features = ["R", "H", "R/G", "OPS"]
+                            features = ["R", "H", "R/G", "OPS",
+                                        "HR", "BB", "SO", "OBP", "SLG"]
                             predicted_rg_value = model.predict(
                                 team_features[features])[0]
 
@@ -157,22 +160,28 @@ def get_recommendation(bookmakers, model, train_data, team_to_id):
 
     return sorted_spreads
 
-def parse_data(mlb_data, model, train_data, team_to_id, teams_playing_today):
+
+def parse_data(api_data, model, train_data, team_to_id):
+    current_date = datetime.utcnow().date()  # Get today's date in UTC
     games = []
-    for game in mlb_data:
-        try:
-            home_team = game['home_team']
-            away_team = game['away_team']
-            commence_time = datetime.fromisoformat(
-                game['commence_time'].replace("Z", ""))
-            bookmakers = game['bookmakers']
+    for game in api_data:
+        commence_time = datetime.strptime(
+            game['commence_time'], '%Y-%m-%dT%H:%M:%SZ')
+        commence_date_utc = commence_time.date()
 
-            # Skip the game if neither team is playing today
-            if home_team not in teams_playing_today and away_team not in teams_playing_today:
-                continue
+        # Skip the game if its commence date in UTC is not today
+        if commence_date_utc != current_date:
+            continue
 
-            # Only get recommendations for teams that are playing today
-            if home_team in teams_playing_today or away_team in teams_playing_today:
+        home_team_id = team_to_id.get(game['home_team'], None)
+        away_team_id = team_to_id.get(game['away_team'], None)
+        if home_team_id is None or away_team_id is None:
+            continue  # Skip if team ID is not found
+
+        if home_team_id in games_playing_today_ids or away_team_id in games_playing_today_ids:
+            try:
+                bookmakers = game['bookmakers']
+
                 # Generate recommendations for all bookmakers
                 all_recommendations = get_recommendation(
                     bookmakers, model, train_data, team_to_id)
@@ -182,22 +191,25 @@ def parse_data(mlb_data, model, train_data, team_to_id, teams_playing_today):
                 if all_recommendations:
                     recommendation.append(
                         max(all_recommendations, key=lambda x: x['predicted_rg']))
+                    print(recommendation)
 
                 if not recommendation:  # Skip this game if no recommendation could be generated
                     continue
 
-            games.append({
-                'home_team': home_team,
-                'away_team': away_team,
-                'commence_time': commence_time,
-                'bookmakers': bookmakers,
-                'recommendation': recommendation,
-            })
-        except Exception as e:
-            print(e)
-            continue
+                games.append({
+                    'home_team': game['home_team'],
+                    'away_team': game['away_team'],
+                    # Already a datetime object
+                    'commence_time': game['commence_time'],
+                    'bookmakers': bookmakers,
+                    'recommendation': recommendation,
+                })
+            except Exception as e:
+                print(e)
+                continue
 
     return games
+
 
 def create_email_template(games):
     email_body = f"""
@@ -247,11 +259,16 @@ def create_email_template(games):
     """
 
     for game in games:
-        commence_time = game['commence_time'].strftime('%H:%M')  # Format time
+        commence_time = datetime.strptime(
+            game['commence_time'], '%Y-%m-%dT%H:%M:%SZ')
+        commence_time = commence_time.replace(tzinfo=pytz.utc).astimezone(
+            pytz.timezone('America/New_York'))  # Convert to EST/EDT
+        # Format time to human-readable here
+        commence_time = commence_time.strftime('%B %d, %Y at %I:%M%p EST')
         email_body += f"""
         <div class="game">
             <h2>{game['home_team']} vs {game['away_team']}</h2>
-            <div class="start-time">Start time: {commence_time} Local Time</div>
+            <div class="start-time">Start time: {commence_time}</div>
         """
         for rec in game['recommendation']:
             email_body += f"""
@@ -259,6 +276,7 @@ def create_email_template(games):
             """
         email_body += "</div>"
     return email_body
+
 
 def send_email(games, mae, mse, r2, email_body):
     # Send email with game predictions and model evaluation metrics
@@ -268,7 +286,7 @@ def send_email(games, mae, mse, r2, email_body):
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"MLB Game Predictions for {datetime.now().strftime('%B %d, %Y')}"
     msg["From"] = bet_email = os.getenv("BET_EMAIL")
-    msg["To"] = "callmevojtko@yahoo.com" # Replace with your email address
+    msg["To"] = "firewall704@gmail.com"  # Replace with your email address
 
     # Added model evaluation metrics to the email body
     email_body += f"""
@@ -307,27 +325,28 @@ def get_credentials():
 
     return creds
 
+
 if __name__ == "__main__":
     try:
         print("Fetching data from API...")
         api_data = fetch_data_from_api()
         print("Getting today's games...")
-        teams_playing_today = get_teams_playing_today(api_data)
+        games_playing_today_ids = get_games_playing_today(api_data, team_to_id)
         print("Loading and preprocessing data...")
-        train_data, test_data, team_to_id = load_and_preprocess_data(api_data, teams_playing_today)
+        train_data, test_data = load_and_preprocess_data(api_data, games_playing_today_ids)
         print("Training and testing the model...")
         model, mae, mse, r2, X_test = train_and_test_model(train_data, test_data)
         print("Parsing data...")
-        games = parse_data(api_data, model, train_data, team_to_id, teams_playing_today)
+        games = parse_data(api_data, model, train_data, team_to_id)
         print("Creating email template...")
         email_body = create_email_template(games)
         print("Sending email...")
         send_email(games, mae, mse, r2, email_body)
         print("Done!")
-        
+
         # Save the games data as a JSON file
         with open('data/data.json', 'w') as f:
             json.dump(games, f, default=str)
-            
+
     except Exception as e:
         print(f"An error occurred: {str(e)}")
