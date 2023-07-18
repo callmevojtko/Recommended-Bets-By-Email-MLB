@@ -125,6 +125,7 @@ def train_and_test_model(train_data, test_data):
 
     return model, mae, mse, r2, X_test
 
+
 def get_recommendation(bookmakers, model, train_data, team_to_id):
     spreads = []
     for bookmaker in bookmakers:
@@ -286,7 +287,7 @@ def send_email(games, mae, mse, r2, email_body):
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"MLB Game Predictions for {datetime.now().strftime('%B %d, %Y')}"
     msg["From"] = bet_email = os.getenv("BET_EMAIL")
-    msg["To"] = "firewall704@gmail.com"  # Replace with your email address
+    msg["To"] = ""  # Replace with your email address
 
     # Added model evaluation metrics to the email body
     email_body += f"""
@@ -333,9 +334,11 @@ if __name__ == "__main__":
         print("Getting today's games...")
         games_playing_today_ids = get_games_playing_today(api_data, team_to_id)
         print("Loading and preprocessing data...")
-        train_data, test_data = load_and_preprocess_data(api_data, games_playing_today_ids)
+        train_data, test_data = load_and_preprocess_data(
+            api_data, games_playing_today_ids)
         print("Training and testing the model...")
-        model, mae, mse, r2, X_test = train_and_test_model(train_data, test_data)
+        model, mae, mse, r2, X_test = train_and_test_model(
+            train_data, test_data)
         print("Parsing data...")
         games = parse_data(api_data, model, train_data, team_to_id)
         print("Creating email template...")
