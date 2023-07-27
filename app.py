@@ -19,8 +19,8 @@ from dotenv import load_dotenv
 
 # Create dictionary that maps team names to team ID's
 team_to_id = {
-    "Atlanta Braves": 1,
-    "Arizona Diamondbacks": 2,
+    "Arizona Diamondbacks": 1,
+    "Atlanta Braves": 2,
     "Baltimore Orioles": 3,
     "Boston Red Sox": 4,
     "Chicago Cubs": 5,
@@ -83,22 +83,7 @@ def get_games_playing_today(api_data, team_to_id):
 
 def load_and_preprocess_data(api_data, games_playing_today_ids):
     # Load the CSV data
-    batting_data = pd.read_csv("data/2023_MLB_Batting_Data.csv")
-    pitching_data = pd.read_csv("data/2023_MLB_Pitching_Data.csv")
-    standings_data = pd.read_csv("data/2023_MLB_Standings_Data.csv")
-
-    # Function to convert win-loss records into win percentages
-    def win_loss_to_percentage(x):
-        win, loss = map(float, x.split('-'))
-        return win / (win + loss) if win + loss > 0 else 0
-
-    # Convert win-loss records into win percentages
-    for col in ['≥.500', '<.500']:
-        standings_data[col] = standings_data[col].apply(win_loss_to_percentage)
-
-    # Merge the batting, pitching and standings data on 'Team_ID'
-    mlb_data = pd.merge(batting_data, pitching_data, on=['Team_ID'])
-    mlb_data = pd.merge(mlb_data, standings_data, on=['Team_ID'])
+    mlb_data = pd.read_csv("data/2023_MLB_Data.csv")
 
     # Check if the CSV data is not empty
     if mlb_data.empty:
@@ -117,10 +102,10 @@ def load_and_preprocess_data(api_data, games_playing_today_ids):
 
     return train_data, test_data
 
+
 def train_and_test_model(train_data, test_data):
     # Prepare the training data
-    features = ["xBA", "xSLG", "xwOBA", "RA/G", "ERA", "WHIP", "SO9",
-                "W-L%", "Win/Loss%", "Rdiff", "SOS", "SRS", "Luck", "≥.500", "<.500"]
+    features = ["R", "H", "R/G", "OPS", "HR", "BB", "SO", "OBP", "SLG"]
     X_train = train_data[features]
     y_train = train_data["R/G"]
 
@@ -142,39 +127,39 @@ def train_and_test_model(train_data, test_data):
 
 
 def get_recommendation(bookmakers, model, train_data, team_to_id):
-    h2h_recommendations = []
-    features = ["xBA", "xSLG", "xwOBA", "RA/G", "ERA", "WHIP", "SO9",
-                "W-L%", "Win/Loss%", "Rdiff", "SOS", "SRS", "Luck", "≥.500", "<.500"]
-
+    spreads = []
     for bookmaker in bookmakers:
         for market in bookmaker["markets"]:
-            if market["key"] == "h2h":
+            if market["key"] == "spreads":
                 for outcome in market["outcomes"]:
                     team_name = outcome['name']
                     team_id = team_to_id.get(team_name, -1)
                     if team_id != -1:  # Only proceed if team ID is valid
                         team_features = train_data.loc[train_data['Team_ID'] == team_id]
                         if not team_features.empty:
-                            predicted_value = model.predict(
+                            features = ["R", "H", "R/G", "OPS",
+                                        "HR", "BB", "SO", "OBP", "SLG"]
+                            predicted_rg_value = model.predict(
                                 team_features[features])[0]
 
-                            h2h_recommendations.append({
+                            spreads.append({
                                 "team": team_name,  # Use team name here for human-readable output
                                 "price": outcome["price"],
+                                "point": outcome["point"],
                                 "bookmaker": bookmaker["title"],
-                                "predicted_value": predicted_value,
+                                "predicted_rg": predicted_rg_value,
                             })
                     else:
                         print(
                             f"Skipping team {team_name} because no ID could be found for it")
 
-    if not h2h_recommendations:
+    if not spreads:
         return None  # Return None instead of an error dictionary
 
-    sorted_recommendations = sorted(
-        h2h_recommendations, key=lambda x: x["predicted_value"], reverse=True)
+    sorted_spreads = sorted(
+        spreads, key=lambda x: (x["predicted_rg"], -x["price"]), reverse=True)
 
-    return sorted_recommendations
+    return sorted_spreads
 
 
 def parse_data(api_data, model, train_data, team_to_id):
@@ -203,27 +188,29 @@ def parse_data(api_data, model, train_data, team_to_id):
                     bookmakers, model, train_data, team_to_id)
 
                 # Select the top recommendation from all
-                recommendations = []
+                recommendation = []
                 if all_recommendations:
-                    recommendations.append(
-                        max(all_recommendations, key=lambda x: x['predicted_value']))
-                    print(recommendations)
+                    recommendation.append(
+                        max(all_recommendations, key=lambda x: x['predicted_rg']))
+                    print(recommendation)
 
-                if not recommendations:  # Skip this game if no recommendation could be generated
+                if not recommendation:  # Skip this game if no recommendation could be generated
                     continue
 
                 games.append({
                     'home_team': game['home_team'],
                     'away_team': game['away_team'],
+                    # Already a datetime object
                     'commence_time': game['commence_time'],
                     'bookmakers': bookmakers,
-                    'recommendation': recommendations,
+                    'recommendation': recommendation,
                 })
             except Exception as e:
                 print(e)
                 continue
 
     return games
+
 
 def create_email_template(games):
     email_body = f"""
@@ -286,7 +273,7 @@ def create_email_template(games):
         """
         for rec in game['recommendation']:
             email_body += f"""
-            <div class="recommendation">Recommendation: <span style="color: green;">{rec['team']} ({rec['price']})</span> at <span style="color: red;">{rec['bookmaker']}</span></div>
+            <div class="recommendation">Recommendation: <span style="color: green;">{rec['team']} ({rec['point']}/{rec['price']})</span> at <span style="color: red;">{rec['bookmaker']}</span></div>
             """
         email_body += "</div>"
     return email_body
@@ -298,9 +285,9 @@ def send_email(games, mae, mse, r2, email_body):
     service = build('gmail', 'v1', credentials=creds)
 
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"MLB Moneyline Predictions for {datetime.now().strftime('%B %d, %Y')}"
+    msg["Subject"] = f"MLB Game Predictions for {datetime.now().strftime('%B %d, %Y')}"
     msg["From"] = bet_email = os.getenv("BET_EMAIL")
-    msg["To"] = "callmevojtko@yahoo.com"  # Replace with your email address
+    msg["To"] = ""  # Replace with your email address
 
     # Added model evaluation metrics to the email body
     email_body += f"""
