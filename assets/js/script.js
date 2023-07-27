@@ -45,8 +45,8 @@ fetch('data/data.json')
     .then((data) => createHtml(data))
 
 function createHtml(games) {
-    // Create a container for the games
-    var container = document.createElement('div')
+    // Get the existing container for the games
+    var container = document.querySelector('.games-container');
 
     games.forEach((game) => {
         // Create a div for each game
@@ -93,7 +93,7 @@ function createHtml(games) {
 
             recommendationDiv.appendChild(
                 document.createTextNode(
-                    `Recommendation: ${rec.team} (${rec.point}/${rec.price}) at `
+                    `Recommendation: ${rec.team} (${rec.price}) at `
                 )
             )
             recommendationDiv.appendChild(bookmakerLogo)
@@ -104,7 +104,4 @@ function createHtml(games) {
         // Append the game div to the container
         container.appendChild(gameDiv)
     })
-
-    // Append the container to the body of the page
-    document.body.appendChild(container)
 }
