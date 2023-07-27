@@ -30,13 +30,19 @@ By comparing these metrics with the latest betting lines offered, the model can 
 - The Odds API
 
 ## How to Use
-1. Create an account with [The Odds API](https://the-odds-api.com/) to get an API key. The API key is then used as an argument to the `fetch_data_from_api()` function in the script.
+1. Create an account with [The Odds API](https://the-odds-api.com/) to get an API key. Store your API key in a `.env` file as `API_KEY = <apiKey>`. The API key is then used as an argument to the `fetch_data_from_api()` function in the script.
 
-2. Obtain credentials for Gmail API. These credentials should be stored in a `credentials.json` file in the root directory of the project. Read more on setting up the Gmail API with Python [here](https://developers.google.com/gmail/api/quickstart/python)
+2. Once you have your API key, you can paste this API link in your browser:
+    `https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?regions=us&markets=spreads&bookmakers=fanduel,draftkings,barstool&oddsFormat=american&apiKey=**[INSERT YOUR API CODE HERE]**`
+  - Please see the Odds API docs for more info [here](https://the-odds-api.com/liveapi/guides/v4/)
 
-3. Replace ```msg["To"] = "YOUR_EMAIL_HERE"``` on line 247 with the email you want to receive the recommendations to.
+3. Obtain credentials for Gmail API. These credentials should be stored in a `credentials.json` file in the root directory of the project. Read more on setting up the Gmail API with Python [here](https://developers.google.com/gmail/api/quickstart/python)
 
-4. Once the above prerequisites are completed, you can run the `main()` function to fetch the betting lines, generate recommendations, and send an email with the recommendations to a specified recipient.
+4. In your `.env` file, add a variable `BET_EMAIL` and use the email that is authorized with Gmail API.
+
+5. Replace ```msg["To"] = "YOUR_EMAIL_HERE"``` on line 247 with the email you want to receive the recommendations to.
+
+6. Once the above prerequisites are completed, you can run the `main()` function to fetch the betting lines, generate recommendations, and send an email with the recommendations to a specified recipient.
 
 ## Contribute
 Everyone is welcome to contribute to this project! Feel free to add new features, fix bugs, or make improvements. Just fork the repository, make your changes, and submit a pull request. I appreciate your help! :)
