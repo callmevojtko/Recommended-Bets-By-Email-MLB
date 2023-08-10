@@ -18,27 +18,28 @@ Modular Structure: The codebase is organized into modules for data fetching, pro
 
 ## Example Email
 
-![Example](https://user-images.githubusercontent.com/43586291/235729092-86301d2e-3ccc-4912-9ad3-c3c22c88258b.png)
+<img width="400" alt="Screenshot 2023-08-10 at 1 37 43 PM" src="https://github.com/callmevojtko/Recommended-Bets-By-Email-MLB/assets/43586291/69296959-8a0d-48f1-bd56-8f04f6f77580">
+
 
 ## Technologies Used
-Python
-Pandas
-Scikit-learn
-[pybaseball](https://github.com/jldbc/pybaseball)
-Gmail API
-[The Odds API](https://the-odds-api.com/) 
-HTML & CSS
+- Python
+- Pandas
+- Scikit-learn
+- [pybaseball](https://github.com/jldbc/pybaseball)
+- Gmail API
+- [The Odds API](https://the-odds-api.com/) 
+- HTML & CSS
 
 ## How to Use
-1. API Setup: Create a free account with [The Odds API](https://the-odds-api.com/) to obtain an API key. Store this key in a .env file as API_KEY=<apiKey>.
-  - Please see the Odds API docs for more info [here](https://the-odds-api.com/liveapi/guides/v4/)
+1. API Setup: Create a free account with [The Odds API](https://the-odds-api.com/) to obtain an API key. Store this key in a `.env` file as `API_KEY=<apiKey>`.
+   - Please see the Odds API docs for more info [here](https://the-odds-api.com/liveapi/guides/v4/)
 
-2. Gmail API Setup: Obtain credentials for the Gmail API and store them in a credentials.json file in the data directory. Then run modules/quickstart.py to generate a token.json file.
-  - Read more on setting up the Gmail API with Python [here](https://developers.google.com/gmail/api/quickstart/python)
+2. Gmail API Setup: Obtain credentials for the Gmail API and store them in a `credentials.json` file in the data directory. Then run `modules/quickstart.py` to generate a `token.json` file.
+   - Read more on setting up the Gmail API with Python [here](https://developers.google.com/gmail/api/quickstart/python)
 
-3. Environment Variables: In your .env file, specify the email that is authorized with the Gmail API as BET_EMAIL and the recipient's email as RECIPENT_EMAIL.
+3. Environment Variables: In your `.env` file, specify the email that is authorized with the Gmail API as `BET_EMAIL` and the recipient's email as `RECIPENT_EMAIL`.
 
-4. Execution: Run the app.py script. This will fetch the betting lines, train the model, generate recommendations, and send an email with the betting recommendations to the specified recipient.
+4. Execution: Run the `app.py` script. This will fetch the betting lines, train the model, generate recommendations, and send an email with the betting recommendations to the specified recipient.
 
 ## Contribute
 Everyone is welcome to contribute to this project! Feel free to add new features, fix bugs, or make improvements. Just fork the repository, make your changes, and submit a pull request. I appreciate your help! :)
