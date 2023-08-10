@@ -37,7 +37,7 @@ Modular Structure: The codebase is organized into modules for data fetching, pro
 2. Gmail API Setup: Obtain credentials for the Gmail API and store them in a `credentials.json` file in the data directory. Then run `modules/quickstart.py` to generate a `token.json` file.
    - Read more on setting up the Gmail API with Python [here](https://developers.google.com/gmail/api/quickstart/python)
 
-3. Environment Variables: In your `.env` file, specify the email that is authorized with the Gmail API as `BET_EMAIL` and the recipient's email as `RECIPENT_EMAIL`.
+3. Environment Variables: In your `.env` file, specify the email that is authorized with the Gmail API as `BET_EMAIL` and the recipient's email as `RECIPIENT_EMAIL`.
 
 4. Execution: Run the `app.py` script. This will fetch the betting lines, train the model, generate recommendations, and send an email with the betting recommendations to the specified recipient.
 
