@@ -1,10 +1,11 @@
-beautifulsoup4==4.11.1
+chartio==6.0.1
+eli5==0.13.0
 google_api_python_client==2.86.0
 google_auth_oauthlib==1.0.0
 lahman==0.0.1
 pandas==1.5.3
 plotting==0.0.7
-protobuf==4.23.4
+protobuf==4.24.0
 pybaseball==2.2.5
 python-dotenv==1.0.0
 pytz==2022.7.1

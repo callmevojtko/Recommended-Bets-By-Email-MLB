@@ -1,48 +1,44 @@
 # MLB Betting Recommendation Emailer
 
-This machine learning model utilizes a Random Forest Regressor to generate recommended spread bets for Major League Baseball (MLB) games. The model fetches game data from The Odds API, which aggregates data from reputable sportsbooks such as Fanduel, DraftKings, and Barstool.
+This advanced machine learning model utilizes a Random Forest Regressor to generate betting recommendations for Major League Baseball (MLB) games. 
+By leveraging aggregated data from reputed sportsbooks such as Fanduel, DraftKings, and Barstool via The Odds API, and combining it with the team's performance metrics from the 2023 season, 
+the model provides insightful betting line recommendations.
 
-The model considers several key performance metrics that reflect a team's past performance in the current 2023 season such as:
-> R: Runs,
+## Features
 
-> H: Hits,
-  
-> R/G: Runs per Game,
-  
-> OPS: On-base Plus Slugging,
-  
-and more.
+Data Aggregation: Fetches game data from The Odds API, which includes the latest betting lines from renowned sportsbooks.
 
-By comparing these metrics with the latest betting lines offered, the model can predict which spreads are most likely to be successful.
+Machine Learning Model: Utilizes a Random Forest Regressor to make predictions based on team performance metrics pulled from pybaseball.
+
+Email Notifications: Sends betting recommendations via email, using a well-formatted HTML template.
+
+Comprehensive Analysis: Considers various key performance metrics such as Runs, Hits, Runs per Game, On-base Plus Slugging, and more.
+
+Modular Structure: The codebase is organized into modules for data fetching, processing, model training, and email utilities, making it easy to understand and extend.
 
 ## Example Email
 
 ![Example](https://user-images.githubusercontent.com/43586291/235729092-86301d2e-3ccc-4912-9ad3-c3c22c88258b.png)
 
 ## Technologies Used
-- Python
-- Pandas
-- NumPy
-- Scikit-learn
-- HTML
-- CSS
-- Gmail API
-- The Odds API
+Python
+Pandas
+Scikit-learn
+[pybaseball](https://github.com/jldbc/pybaseball)
+Gmail API
+[The Odds API](https://the-odds-api.com/) 
+HTML & CSS
 
 ## How to Use
-1. Create an account with [The Odds API](https://the-odds-api.com/) to get an API key. Store your API key in a `.env` file as `API_KEY = <apiKey>`. The API key is then used as an argument to the `fetch_data_from_api()` function in the script.
-
-2. Once you have your API key, you can paste this API link in your browser:
-    `https://api.the-odds-api.com/v4/sports/baseball_mlb/odds/?regions=us&markets=spreads&bookmakers=fanduel,draftkings,barstool&oddsFormat=american&apiKey=**[INSERT YOUR API CODE HERE]**`
+1. API Setup: Create a free account with [The Odds API](https://the-odds-api.com/) to obtain an API key. Store this key in a .env file as API_KEY=<apiKey>.
   - Please see the Odds API docs for more info [here](https://the-odds-api.com/liveapi/guides/v4/)
 
-3. Obtain credentials for Gmail API. These credentials should be stored in a `credentials.json` file in the root directory of the project. Read more on setting up the Gmail API with Python [here](https://developers.google.com/gmail/api/quickstart/python)
+2. Gmail API Setup: Obtain credentials for the Gmail API and store them in a credentials.json file in the data directory. Then run modules/quickstart.py to generate a token.json file.
+  - Read more on setting up the Gmail API with Python [here](https://developers.google.com/gmail/api/quickstart/python)
 
-4. In your `.env` file, add a variable `BET_EMAIL` and use the email that is authorized with Gmail API.
+3. Environment Variables: In your .env file, specify the email that is authorized with the Gmail API as BET_EMAIL and the recipient's email as RECIPENT_EMAIL.
 
-5. Replace ```msg["To"] = "YOUR_EMAIL_HERE"``` on line 247 with the email you want to receive the recommendations to.
-
-6. Once the above prerequisites are completed, you can run the `main()` function to fetch the betting lines, generate recommendations, and send an email with the recommendations to a specified recipient.
+4. Execution: Run the app.py script. This will fetch the betting lines, train the model, generate recommendations, and send an email with the betting recommendations to the specified recipient.
 
 ## Contribute
 Everyone is welcome to contribute to this project! Feel free to add new features, fix bugs, or make improvements. Just fork the repository, make your changes, and submit a pull request. I appreciate your help! :)

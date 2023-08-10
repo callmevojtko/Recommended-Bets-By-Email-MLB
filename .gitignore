@@ -20,8 +20,8 @@ credentials.json
 token.json
 *.xml
 *.sqlite
-quickstart.py
 api.py
+*.csv
 
 # Ignore Jupyter Notebook
 .ipynb_checkpoints
